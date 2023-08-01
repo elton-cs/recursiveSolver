@@ -10,27 +10,30 @@ const ProofOfCode = Experimental.ZkProgram({
     // testing matches the public input test hash supplied.
     init: {
       privateInputs: [Field],
-      method(publicState: viewableInputHash, testCode: Field) {
+      method(testOnlyState: viewableInputHash, testCode: Field) {
         // here a poseidon hash is applied to the code string
         // to assert that the builder is not falsifying their test
-        publicState.testHash.assertEquals(Poseidon.hash([testCode]));
-        publicState.solutionASM.assertEquals(Field(0));
+        testOnlyState.testHash.assertEquals(Poseidon.hash([testCode]));
+        testOnlyState.solutionASMHash.assertEquals(Field(0));
       },
     },
 
-    // commitASM: {
-    //     privateInputs: [SelfProof, Field],
-    //     method(
-    //         testHashWithASM: Field,
-    //         testInitProof: SelfProof<Field, Field>,
-    //         solutionASM: Field
-    //     ) {
-    //         testInitProof.verify();
-    //         testHashWithASM.assertEquals(
-    //             Poseidon.hash([testInitProof.publicInput, solutionASM])
-    //         );
-    //     },
-    // },
+    commitASM: {
+      privateInputs: [SelfProof, Field],
+      method(
+        testWithASMState: viewableInputHash,
+        testOnlyStateProof: SelfProof<viewableInputHash, Field>,
+        solutionASM: Field
+      ) {
+        testOnlyStateProof.verify();
+        testWithASMState.testHash.assertEquals(
+          testOnlyStateProof.publicInput.testHash
+        );
+        testWithASMState.solutionASMHash.assertEquals(
+          Poseidon.hash([solutionASM])
+        );
+      },
+    },
 
     // add: {
     //     privateInputs: [SelfProof, SelfProof],
@@ -62,9 +65,10 @@ console.timeEnd('compiling');
 // public inputs
 let hashOfTest = Poseidon.hash([Field(1204)]);
 let noSolution = Field(0);
-let publicInputs = new viewableInputHash({
+
+let newBountyState = new viewableInputHash({
   testHash: hashOfTest,
-  solutionASM: noSolution,
+  solutionASMHash: noSolution,
 });
 
 // private inputs
@@ -72,23 +76,32 @@ let test = Field(1204);
 
 // commiting unit test code and it's hash [proof 1]
 console.time('commiting hash of unit test');
-const proof0 = await ProofOfCode.init(publicInputs, test);
+const proof0 = await ProofOfCode.init(newBountyState, test);
 console.timeEnd('commiting hash of unit test');
 // --------------------------------------------------------------------------
 
 // 2. Builder sends proof of unit test commitment to Hunter
 
-// let openBounty = hashOfTest;
+// proof from available bounty
+let openBounty = proof0.publicInput.testHash;
 
-// let solutionInCode = 777;
-// let solutionInASM = Field(solutionInCode);
-// let hashOfTestWithASM = Poseidon.hash([openBounty, solutionInASM]);
+// private input
+let solutionInCode = 777;
+let solutionInASM = Field(solutionInCode);
 
-// // commiting ASM of unit test solution [proof 2]
-// console.time('commiting ASM of unit test solution');
-// const proof1 = await ProofOfCode.commitASM(
-//     hashOfTestWithASM,
-//     proof0,
-//     solutionInASM
-// );
-// console.timeEnd('commiting ASM of unit test solution');
+// public inputs
+let solutionASMHash = Poseidon.hash([solutionInASM]);
+
+let inProgressBountyState = new viewableInputHash({
+  testHash: openBounty,
+  solutionASMHash: solutionASMHash,
+});
+
+// commiting ASM of unit test solution [proof 2]
+console.time('commiting ASM of unit test solution');
+const proof1 = await ProofOfCode.commitASM(
+  inProgressBountyState,
+  proof0,
+  solutionInASM
+);
+console.timeEnd('commiting ASM of unit test solution');
