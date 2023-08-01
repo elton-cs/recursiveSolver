@@ -16,16 +16,17 @@ const ProofOfCode = Experimental.ZkProgram({
       },
     },
 
-    addNumber: {
+    commitASM: {
       privateInputs: [SelfProof, Field],
-
       method(
-        newState: Field,
-        earlierProof: SelfProof<Field, Field>,
-        numberToAdd: Field
+        testHashWithASM: Field,
+        testInitProof: SelfProof<Field, Field>,
+        solutionASM: Field
       ) {
-        earlierProof.verify();
-        newState.assertEquals(earlierProof.publicInput.add(numberToAdd));
+        testInitProof.verify();
+        testHashWithASM.assertEquals(
+          Poseidon.hash([testInitProof.publicInput, solutionASM])
+        );
       },
     },
 
@@ -47,13 +48,36 @@ const ProofOfCode = Experimental.ZkProgram({
   },
 });
 
-let hashOfTest = Poseidon.hash([Field(1204)]);
-let test = Field(1204);
-
+// compiling
 console.time('compiling');
 const { verificationKey } = await ProofOfCode.compile();
 console.timeEnd('compiling');
 
+// 1. Bounty Builder commits:
+// unit test code [private input]
+// its poseidon hash [public input]
+let hashOfTest = Poseidon.hash([Field(1204)]);
+let test = Field(1204);
+
+// commiting unit test code and it's hash [proof 1]
 console.time('commiting hash of unit test');
 const proof0 = await ProofOfCode.init(hashOfTest, test);
 console.timeEnd('commiting hash of unit test');
+// --------------------------------------------------------------------------
+
+// 2. Builder sends proof of unit test commitment to Hunter
+
+let openBounty = hashOfTest;
+
+let solutionInCode = 777;
+let solutionInASM = Field(solutionInCode);
+let hashOfTestWithASM = Poseidon.hash([openBounty, solutionInASM]);
+
+// commiting ASM of unit test solution [proof 2]
+console.time('commiting ASM of unit test solution');
+const proof1 = await ProofOfCode.commitASM(
+  hashOfTestWithASM,
+  proof0,
+  solutionInASM
+);
+console.timeEnd('commiting ASM of unit test solution');
