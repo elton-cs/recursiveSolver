@@ -1,7 +1,7 @@
 import { Experimental, Field, Poseidon, SelfProof } from 'snarkyjs';
 import { viewableInputHash } from './viewableInputHash.js';
 
-const ProofOfCode = Experimental.ZkProgram({
+export const proofOfCodeZKP = Experimental.ZkProgram({
   // PUBLIC INPUT: hash of unit test with empty (boilerplate) solution
   publicInput: viewableInputHash,
 
@@ -52,56 +52,3 @@ const ProofOfCode = Experimental.ZkProgram({
     // },
   },
 });
-
-// compiling
-console.time('compiling');
-const { verificationKey } = await ProofOfCode.compile();
-console.timeEnd('compiling');
-
-// 1. Bounty Builder commits:
-// unit test code [private input]
-// its poseidon hash [public input]
-
-// public inputs
-let hashOfTest = Poseidon.hash([Field(1204)]);
-let noSolution = Field(0);
-
-let newBountyState = new viewableInputHash({
-  testHash: hashOfTest,
-  solutionASMHash: noSolution,
-});
-
-// private inputs
-let test = Field(1204);
-
-// commiting unit test code and it's hash [proof 1]
-console.time('commiting hash of unit test');
-const proof0 = await ProofOfCode.init(newBountyState, test);
-console.timeEnd('commiting hash of unit test');
-// --------------------------------------------------------------------------
-
-// 2. Builder sends proof of unit test commitment to Hunter
-
-// proof from available bounty
-let openBounty = proof0.publicInput.testHash;
-
-// private input
-let solutionInCode = 777;
-let solutionInASM = Field(solutionInCode);
-
-// public inputs
-let solutionASMHash = Poseidon.hash([solutionInASM]);
-
-let inProgressBountyState = new viewableInputHash({
-  testHash: openBounty,
-  solutionASMHash: solutionASMHash,
-});
-
-// commiting ASM of unit test solution [proof 2]
-console.time('commiting ASM of unit test solution');
-const proof1 = await ProofOfCode.commitASM(
-  inProgressBountyState,
-  proof0,
-  solutionInASM
-);
-console.timeEnd('commiting ASM of unit test solution');
