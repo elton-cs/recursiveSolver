@@ -1,59 +1,52 @@
-// import { hexOfTest } from './hexOfTest.js';
-// import { encodeHexToField } from './hexToField.js';
-// import { proofOfCodeZKP } from './proofOfCodeZKP.js';
-// import { viewableInputHash } from './viewableInputHash.js';
-// import { Field, Poseidon } from 'snarkyjs';
+import { hexOfSolution } from './hexOfSolution.js';
+import { hexOfTest } from './hexOfTest.js';
+import { encodeHexToField } from './hexToField.js';
+import { proofOfCodeHEX } from './proofOfCodeHEX.js';
+import { publicBountyState } from './publicBountyState.js';
+import { Field } from 'snarkyjs';
 
-// // compiling
-// // console.time('compiling');
-// // const { verificationKey } = await proofOfCodeZKP.compile();
-// // console.timeEnd('compiling');
+// compiling
+console.time('compiling');
+const { verificationKey } = await proofOfCodeHEX.compile();
+console.timeEnd('compiling');
 
-// // 1. Bounty Builder commits:
-// // unit test code [private input]
-// // its poseidon hash [public input]
+// 1. Bounty Builder commits:
 
-// // public inputs
-// let hashOfTest = encodeHexToField(hexOfTest);
-// let noSolution = Field(0);
+// public inputs
+let hashOfTest = encodeHexToField(hexOfTest);
+let noSolution = Field(0);
 
-// let newBountyState = new viewableInputHash({
-//     testHash: hashOfTest,
-//     solutionASMHash: noSolution,
-// });
+let newBountyState = new publicBountyState({
+  testHash: hashOfTest,
+  solutionASMHash: noSolution,
+});
 
-// // private inputs
-// // let test = hexOfTest;
-// // console.log(hashOfTest)
+// commiting unit test code hash [proof 1]
+console.time('commiting hash of unit test');
+const proof0 = await proofOfCodeHEX.init(newBountyState);
+console.timeEnd('commiting hash of unit test');
+// --------------------------------------------------------------------------
 
-// // commiting unit test code and it's hash [proof 1]
-// console.time('commiting hash of unit test');
-// const proof0 = await proofOfCodeZKP.init(newBountyState);
-// console.timeEnd('commiting hash of unit test');
-// // --------------------------------------------------------------------------
+// 2. Builder sends proof of unit test commitment to Hunter
 
-// // // 2. Builder sends proof of unit test commitment to Hunter
+// proof from available bounty
+let openBounty = proof0.publicInput.testHash;
 
-// // // proof from available bounty
-// // let openBounty = proof0.publicInput.testHash;
+// private input
+// let solutionInCode = 777;
+// let solutionInASM = Field(solutionInCode);
 
-// // // private input
-// // let solutionInCode = 777;
-// // let solutionInASM = Field(solutionInCode);
+let solutionInASM = hexOfSolution;
+let solutionASMHash = encodeHexToField(solutionInASM);
 
-// // // public inputs
-// // let solutionASMHash = Poseidon.hash([solutionInASM]);
+// public inputs
 
-// // let inProgressBountyState = new viewableInputHash({
-// //     testHash: openBounty,
-// //     solutionASMHash: solutionASMHash,
-// // });
+let inProgressBountyState = new publicBountyState({
+  testHash: openBounty,
+  solutionASMHash: solutionASMHash,
+});
 
-// // // commiting ASM of unit test solution [proof 2]
-// // console.time('commiting ASM of unit test solution');
-// // const proof1 = await proofOfCodeZKP.commitASM(
-// //     inProgressBountyState,
-// //     proof0,
-// //     solutionInASM
-// // );
-// // console.timeEnd('commiting ASM of unit test solution');
+// commiting ASM hash of unit test solution [proof 2]
+console.time('commiting ASM of unit test solution');
+const proof1 = await proofOfCodeHEX.commitASM(inProgressBountyState, proof0);
+console.timeEnd('commiting ASM of unit test solution');

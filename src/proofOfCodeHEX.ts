@@ -1,5 +1,5 @@
 import { Experimental, Field, Poseidon, SelfProof } from 'snarkyjs';
-import { publicBountyState } from './publicBountyState';
+import { publicBountyState } from './publicBountyState.js';
 
 export const proofOfCodeHEX = Experimental.ZkProgram({
   // PUBLIC INPUT: hash of unit test with empty (boilerplate) solution
@@ -9,28 +9,26 @@ export const proofOfCodeHEX = Experimental.ZkProgram({
     // this function will commit that the raw unit test code used for
     // testing matches the public input test hash supplied.
     init: {
-      privateInputs: [Field],
-      method(testOnlyState: publicBountyState, testCode: Field) {
+      privateInputs: [],
+      method(testOnlyState: publicBountyState) {
         // here a poseidon hash is applied to the code string
         // to assert that the builder is not falsifying their test
-        testOnlyState.testHash.assertEquals(Poseidon.hash([testCode]));
         testOnlyState.solutionASMHash.assertEquals(Field(0));
       },
     },
 
     commitASM: {
-      privateInputs: [SelfProof, Field],
+      privateInputs: [SelfProof],
       method(
         testWithASMState: publicBountyState,
-        testOnlyStateProof: SelfProof<publicBountyState, Field>,
-        solutionASM: Field
+        testOnlyStateProof: SelfProof<publicBountyState, Field>
       ) {
         testOnlyStateProof.verify();
         testWithASMState.testHash.assertEquals(
           testOnlyStateProof.publicInput.testHash
         );
-        testWithASMState.solutionASMHash.assertEquals(
-          Poseidon.hash([solutionASM])
+        testWithASMState.solutionASMHash.assertNotEquals(
+          testOnlyStateProof.publicInput.solutionASMHash
         );
       },
     },
