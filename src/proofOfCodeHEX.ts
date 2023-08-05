@@ -62,6 +62,27 @@ export const proofOfCodeHEX = Experimental.ZkProgram({
       },
     },
 
+    proveSolution: {
+      privateInputs: [SelfProof, Field],
+
+      method(
+        proveSolutionState: publicBountyState,
+        confirmSolutionProposalProof: SelfProof<publicBountyState, Field>,
+        encodedforgeTestOutput: Field
+      ) {
+        confirmSolutionProposalProof.verify();
+        let prevSolutionHash =
+          confirmSolutionProposalProof.publicInput.solutionASMHash;
+        let solutionWithTestOutputHash = Poseidon.hash([
+          prevSolutionHash,
+          encodedforgeTestOutput,
+        ]);
+        proveSolutionState.solutionASMHash.assertEquals(
+          solutionWithTestOutputHash
+        );
+      },
+    },
+
     // add: {
     //     privateInputs: [SelfProof, SelfProof],
 

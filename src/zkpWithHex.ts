@@ -66,7 +66,9 @@ console.time('accepting proposal of solution');
 const proof2 = await proofOfCodeHEX.confirmSolutionProposal(
   proposalBountyState,
   proof1,
-  Bool(true)
+  Bool(true) // Builder accepts the solution proposal
 );
 console.timeEnd('accepting proposal of solution');
 // --------------------------------------------------------------------------
+
+// 4. Hunter generates new proof with solution result from unit test
