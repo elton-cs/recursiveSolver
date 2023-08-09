@@ -62,24 +62,24 @@ export const proofOfCodeHEX = Experimental.ZkProgram({
       },
     },
 
-    proveSolution: {
+    // Verifier inputs solution with fountry test result into proof
+    computeSolutionwithTest: {
       privateInputs: [SelfProof, Field],
 
       method(
-        proveSolutionState: publicBountyState,
+        computeSolutionState: publicBountyState,
         confirmSolutionProposalProof: SelfProof<publicBountyState, Field>,
-        encodedforgeTestOutput: Field
+        foundryTestResult: Field
       ) {
         confirmSolutionProposalProof.verify();
-        let prevSolutionHash =
-          confirmSolutionProposalProof.publicInput.solutionASMHash;
-        let solutionWithTestOutputHash = Poseidon.hash([
-          prevSolutionHash,
-          encodedforgeTestOutput,
-        ]);
-        proveSolutionState.solutionASMHash.assertEquals(
-          solutionWithTestOutputHash
+        computeSolutionState.testHash.assertEquals(
+          confirmSolutionProposalProof.publicInput.testHash
         );
+        let computedSolutionHash = Poseidon.hash([
+          confirmSolutionProposalProof.publicInput.solutionASMHash,
+          foundryTestResult,
+        ]);
+        computeSolutionState.solutionASMHash.assertEquals(computedSolutionHash);
       },
     },
 
